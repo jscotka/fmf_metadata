@@ -1,13 +1,11 @@
 additional_keys:
-  _testlib__skipBrowser: "skipBrowser"
-  _testlib__skipImage: "skipImage"
-  _testlib__skipPackage: "skipPackage"
-  _testlib__non_destructive: "non_destructive"
+  _generic_a: "generic_A"
+  _generic_b: "generic_B"
 
 test_postprocessing:
   environment:
-    TEST_NAMES: '"{}.{}".format(class_name, test_name)'
-    TEST_DIR: "os.path.dirname(os.path.abspath(filename)).lstrip(__find_fmf_root(filename))"
+    TEST_STR: '"{}.{}.{}".format(os.path.basename(filename), class_name, test_name)'
+    FMF_ROOT_DIR: "__find_fmf_root(filename)"
   random: '"value"'
   deep:
     struct:
@@ -15,6 +13,6 @@ test_postprocessing:
       deeper:
         neco: '"out"'
 
-test_glob: ["check-*"]
-test_path: "."
-fmf_file: "out.fmf"
+test_glob: ["check-ex*"]
+test_path: "tests/"
+fmf_file: "/tmp/out.fmf"

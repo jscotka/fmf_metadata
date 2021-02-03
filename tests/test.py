@@ -1,6 +1,6 @@
 import unittest
 from pathlib import Path
-from fmf_metadata.base import yaml_fmf_output, FMFError
+from fmf_metadata.base import yaml_fmf_output, FMFError, read_config
 
 CURRENT_DIR = Path(__file__).parent.absolute()
 
@@ -75,3 +75,19 @@ class TestFMF(unittest.TestCase):
         with self.assertRaises(FMFError) as ctx:
             yaml_fmf_output(path=CURRENT_DIR, testfile_globs=["test-raise-merging"])
         self.assertIn("you are mixing various post_marks for", str(ctx.exception))
+
+
+class TestConfig(unittest.TestCase):
+    def testUnit(self):
+        out = yaml_fmf_output(config=read_config(CURRENT_DIR / "metadata_config.yaml"))
+        data = out["/check-example.py"]["/Test1"]["/testEnvironmentConfig"]
+        self.assertEqual(data["environment"]["DEBUG"], True)
+        self.assertEqual(
+            data["environment"]["TEST_STR"],
+            "check-example.py.Test1.testEnvironmentConfig",
+        )
+        self.assertTrue(
+            data["environment"]["FMF_ROOT_DIR"].endswith("fmf_metadata/tests")
+        )
+        self.assertEqual(data["deep"]["struct"]["deeper"]["neco"], "out")
+        self.assertIn("check-example.py", data["deep"]["struct"]["test"])

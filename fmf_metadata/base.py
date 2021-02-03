@@ -320,14 +320,8 @@ def __find_fmf_root(path):
         root = os.path.dirname(root)
 
 
-def yaml_fmf_output(path=None, testfile_globs=None, fmf_file=None, config_file=None):
-    config = dict()
-    if config_file:
-        if not os.path.exists(config_file):
-            raise FMFError(f"configuration files does not exists {config_file}")
-        print(f"using config: {config_file}")
-        with open(config_file) as fd:
-            config = yaml.safe_load(fd)
+def yaml_fmf_output(path=None, testfile_globs=None, fmf_file=None, config=None):
+    config = config or dict()
     # set values in priority 1. input param, 2. from config file, 3. default value
     fmf_file = fmf_file or config.get(CONFIG_FMF_FILE, MAIN_FMF)
     testfile_globs = testfile_globs or config.get(CONFIG_TESTGLOBS, TESTFILE_GLOBS)
@@ -405,3 +399,11 @@ def show(path, testfile_globs, indent="  "):
             print(indent, class_name)
             for test_name, items2 in items["tests"].items():
                 print(indent * 2, test_name)
+
+
+def read_config(config_file):
+    if not os.path.exists(config_file):
+        raise FMFError(f"configuration files does not exists {config_file}")
+    print(f"using config: {config_file}")
+    with open(config_file) as fd:
+        return yaml.safe_load(fd)

@@ -1,7 +1,13 @@
 import argparse
 import yaml
 import sys
-from fmf_metadata.base import show, yaml_fmf_output
+from fmf_metadata.base import (
+    show,
+    yaml_fmf_output,
+    read_config,
+    MAIN_FMF,
+    CONFIG_FMF_FILE,
+)
 
 # disable references inside yaml files
 setattr(yaml.SafeDumper, "ignore_aliases", lambda *args: True)
@@ -48,14 +54,19 @@ def run():
     if not opts.fmf:
         show(path=opts.fmf_path, testfile_globs=opts.tests)
     else:
+        config = dict()
+        if opts.config:
+            config = read_config(opts.config)
+        fmf_file = config.get(CONFIG_FMF_FILE, MAIN_FMF)
         data = yaml_fmf_output(
             fmf_file=opts.fmf_file,
             path=opts.fmf_path,
             testfile_globs=opts.tests,
-            config_file=opts.config,
+            config=config,
         )
         if opts.fmf_update:
-            with open(opts.fmf_file, "w") as fd:
+            print(f"Update file: {fmf_file}")
+            with open(fmf_file, "w") as fd:
                 yaml.safe_dump(data, fd)
         else:
             yaml.safe_dump(data, sys.stdout)
