@@ -1,13 +1,7 @@
 import argparse
 import yaml
 import sys
-from fmf_metadata.base import (
-    MAIN_FMF,
-    tests_path,
-    TESTFILE_GLOBS,
-    show,
-    yaml_fmf_output,
-)
+from fmf_metadata.base import show, yaml_fmf_output
 
 # disable references inside yaml files
 setattr(yaml.SafeDumper, "ignore_aliases", lambda *args: True)
@@ -24,7 +18,6 @@ def arg_parser():
         "--file",
         dest="fmf_file",
         action="store",
-        default=MAIN_FMF,
         help="Output to fmf format",
     )
     parser.add_argument(
@@ -38,10 +31,15 @@ def arg_parser():
         "--path",
         dest="fmf_path",
         action="store",
-        default=tests_path,
         help="root path to test",
     )
-    parser.add_argument("tests", nargs="*", default=TESTFILE_GLOBS)
+    parser.add_argument(
+        "--config",
+        dest="config",
+        action="store",
+        help="Config file for fmf formatter",
+    )
+    parser.add_argument("tests", nargs="*")
     return parser
 
 
@@ -51,7 +49,10 @@ def run():
         show(path=opts.fmf_path, testfile_globs=opts.tests)
     else:
         data = yaml_fmf_output(
-            fmf_file=opts.fmf_file, path=opts.fmf_path, testfile_globs=opts.tests
+            fmf_file=opts.fmf_file,
+            path=opts.fmf_path,
+            testfile_globs=opts.tests,
+            config_file=opts.config,
         )
         if opts.fmf_update:
             with open(opts.fmf_file, "w") as fd:

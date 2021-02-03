@@ -5,16 +5,10 @@ import importlib
 import os
 import glob
 
-tests_path = os.path.realpath(os.getenv("TEST_PATH", "."))
+TEST_PATH = os.path.realpath(os.getenv("TEST_PATH", "."))
 
-TESTFILE_GLOBS = ["check-*"]
+TESTFILE_GLOBS = ["test-*"]
 MAIN_FMF = "main.fmf"
-SELECTED_KW = {
-    "_testlib__skipBrowser": "skipBrowser",
-    "_testlib__skipImage": "skipImage",
-    "_testlib__skipPackage": "skipPackage",
-    "_testlib__non_destructive": "non_destructive",
-}
 SUMMARY_KEY = "summary"
 DESCRIPTION_KEY = "description"
 ENVIRONMENT_KEY = "environment"
@@ -52,6 +46,12 @@ FMF_ATTRIBUTES = {
 }
 FMF_ATTR_PREFIX = "_fmf__"
 FMF_POSTFIX = ("+", "-", "")
+
+CONFIG_ADDITIONAL_KEY = "additional_keys"
+CONFIG_POSTPROCESSING_TEST = "test_postprocessing"
+CONFIG_TESTGLOBS = "test_glob"
+CONFIG_TEST_PATH = "test_path"
+CONFIG_FMF_FILE = "fmf_file"
 
 
 def filepath_tests(filename):
@@ -320,7 +320,20 @@ def __find_fmf_root(path):
         root = os.path.dirname(root)
 
 
-def yaml_fmf_output(path, testfile_globs, fmf_file=None):
+def yaml_fmf_output(path=None, testfile_globs=None, fmf_file=None, config_file=None):
+    config = dict()
+    if config_file:
+        if not os.path.exists(config_file):
+            raise FMFError(f"configuration files does not exists {config_file}")
+        print(f"using config: {config_file}")
+        with open(config_file) as fd:
+            config = yaml.safe_load(fd)
+    # set values in priority 1. input param, 2. from config file, 3. default value
+    fmf_file = fmf_file or config.get(CONFIG_FMF_FILE, MAIN_FMF)
+    testfile_globs = testfile_globs or config.get(CONFIG_TESTGLOBS, TESTFILE_GLOBS)
+    path = os.path.realpath(path or config.get(CONFIG_TEST_PATH, TEST_PATH))
+    print(config)
+    print(fmf_file, testfile_globs, path)
     fmf_dict = dict()
     if fmf_file and os.path.exists(fmf_file):
         with open(fmf_file) as fd:
@@ -353,24 +366,36 @@ def yaml_fmf_output(path, testfile_globs, fmf_file=None):
                     if doc_str:
                         description = doc_str
                         setattr(items2["method"], current_name, description)
-
-                default_key(test_dict, ENVIRONMENT_KEY, empty_obj={})
-                test_dict[ENVIRONMENT_KEY]["TEST_NAMES"] = "{}.{}".format(
-                    class_name, test_name
-                )
-                relative_test_dir = os.path.dirname(os.path.abspath(filename)).lstrip(
-                    __find_fmf_root(filename)
-                )
-                test_dict[ENVIRONMENT_KEY]["TEST_DIR"] = relative_test_dir
-                # special cockpit items
-                for key, fmf_key in SELECTED_KW.items():
-                    __update_dict_key(items2["method"], key, fmf_key, test_dict)
                 # generic FMF attributes set by decorators
                 for key in FMF_ATTRIBUTES:
                     __update_dict_key(
                         items2["method"], fmf_prefixed_name(key), key, test_dict
                     )
+                # special config items
+                if CONFIG_ADDITIONAL_KEY in config:
+                    for key, fmf_key in config[CONFIG_ADDITIONAL_KEY].items():
+                        __update_dict_key(items2["method"], key, fmf_key, test_dict)
+                if CONFIG_POSTPROCESSING_TEST in config:
+                    print("postprocessing")
+                    __post_processing(
+                        test_dict,
+                        config[CONFIG_POSTPROCESSING_TEST],
+                        filename,
+                        class_name,
+                        test_name,
+                    )
     return fmf_dict
+
+
+def __post_processing(input_dict, config_dict, filename, class_name, test_name):
+    if isinstance(config_dict, dict):
+        for k, v in config_dict.items():
+            if isinstance(v, dict):
+                if k not in input_dict:
+                    input_dict[k] = dict()
+                __post_processing(input_dict[k], v, filename, class_name, test_name)
+            else:
+                input_dict[k] = eval(v)
 
 
 def show(path, testfile_globs, indent="  "):
@@ -380,9 +405,3 @@ def show(path, testfile_globs, indent="  "):
             print(indent, class_name)
             for test_name, items2 in items["tests"].items():
                 print(indent * 2, test_name)
-                for key, val in SELECTED_KW.items():
-                    try:
-                        out = getattr(items2["method"], key)
-                    except AttributeError:
-                        out = ""
-                    print(indent * 3, val, ":", out)

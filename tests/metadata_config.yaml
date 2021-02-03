@@ -1,0 +1,20 @@
+additional_keys:
+  _testlib__skipBrowser: "skipBrowser"
+  _testlib__skipImage: "skipImage"
+  _testlib__skipPackage: "skipPackage"
+  _testlib__non_destructive: "non_destructive"
+
+test_postprocessing:
+  environment:
+    TEST_NAMES: '"{}.{}".format(class_name, test_name)'
+    TEST_DIR: "os.path.dirname(os.path.abspath(filename)).lstrip(__find_fmf_root(filename))"
+  random: '"value"'
+  deep:
+    struct:
+      test: "filename"
+      deeper:
+        neco: '"out"'
+
+test_glob: ["check-*"]
+test_path: "."
+fmf_file: "out.fmf"
