@@ -5,9 +5,8 @@ from fmf_metadata.base import (
     show,
     yaml_fmf_output,
     read_config,
-    MAIN_FMF,
-    CONFIG_FMF_FILE,
 )
+from fmf_metadata.constants import MAIN_FMF, CONFIG_FMF_FILE
 
 # disable references inside yaml files
 setattr(yaml.SafeDumper, "ignore_aliases", lambda *args: True)

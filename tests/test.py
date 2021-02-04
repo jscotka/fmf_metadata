@@ -86,8 +86,6 @@ class TestConfig(unittest.TestCase):
             data["environment"]["TEST_STR"],
             "check-example.py.Test1.testEnvironmentConfig",
         )
-        self.assertTrue(
-            data["environment"]["FMF_ROOT_DIR"].endswith("fmf_metadata/tests")
-        )
+        self.assertTrue(data["environment"]["FMF_ROOT_DIR"].endswith("tests"))
         self.assertEqual(data["deep"]["struct"]["deeper"]["neco"], "out")
         self.assertIn("check-example.py", data["deep"]["struct"]["test"])
