@@ -4,12 +4,12 @@ additional_keys:
 
 test_postprocessing:
   environment:
-    TEST_STR: '"{}.{}.{}".format(os.path.basename(filename), class_name, test_name)'
-    FMF_ROOT_DIR: "__find_fmf_root(filename)"
+    TEST_STR: '"{}.{}.{}".format(os.path.basename(cls.file), cls.name, test.name)'
+    FMF_ROOT_DIR: "__find_fmf_root(cls.file)"
   random: '"value"'
   deep:
     struct:
-      test: "filename"
+      test: "cls.file"
       deeper:
         neco: '"out"'
 

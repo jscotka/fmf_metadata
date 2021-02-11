@@ -36,7 +36,7 @@ class TestFMF(unittest.TestCase):
         )
         self.assertEqual(
             out["/test-basic"]["/TestLinks"]["/testOne"]["link"],
-            [{"verify": "url://link2"}, "url://link", {"dependson": "url://link4"}],
+            [{"verifies": "url://link2"}, "url://link", {"dependson": "url://link4"}],
         )
         self.assertEqual(
             out["/test-basic"]["/TestLinks"]["/testThree"]["link"],
@@ -89,3 +89,13 @@ class TestConfig(unittest.TestCase):
         self.assertTrue(data["environment"]["FMF_ROOT_DIR"].endswith("tests"))
         self.assertEqual(data["deep"]["struct"]["deeper"]["neco"], "out")
         self.assertIn("check-example.py", data["deep"]["struct"]["test"])
+
+        self.assertEqual(set(data["generic_A"]), set(["aaa"]))
+        self.assertEqual(
+            set(out["/check-example.py"]["/Test1"]["/testGeneric"]["generic_A"]),
+            set(["a", "aa", "aaa"]),
+        )
+        self.assertEqual(
+            set(out["/check-example.py"]["/Test1"]["/testGeneric"]["generic_B"]),
+            set(["b", "bb"]),
+        )

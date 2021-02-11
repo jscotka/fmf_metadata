@@ -5,6 +5,7 @@ from fmf_metadata.base import (
     show,
     yaml_fmf_output,
     read_config,
+    debug_print,
 )
 from fmf_metadata.constants import MAIN_FMF, CONFIG_FMF_FILE
 
@@ -64,7 +65,7 @@ def run():
             config=config,
         )
         if opts.fmf_update:
-            print(f"Update file: {fmf_file}")
+            debug_print(f"Update FMF file: {fmf_file}")
             with open(fmf_file, "w") as fd:
                 yaml.safe_dump(data, fd)
         else:

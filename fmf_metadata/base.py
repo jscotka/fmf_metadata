@@ -1,9 +1,11 @@
+from typing import List
 import inspect
 import unittest
 import yaml
 import importlib
 import os
 import glob
+import sys
 from fmf_metadata.constants import (
     FMF_POSTFIX,
     FMF_ATTRIBUTES,
@@ -22,9 +24,29 @@ from fmf_metadata.constants import (
 )
 
 
-def filepath_tests(filename):
+def debug_print(*args, **kwargs):
+    kwargs["file"] = sys.stderr
+    print(*args, **kwargs)
+
+
+class _Test:
+    def __init__(self, test):
+        self.test = test
+        self.name = test._testMethodName
+        self.method = getattr(test.__class__, test._testMethodName)
+
+
+class _TestCls:
+    def __init__(self, test_class, filename):
+        self.file = filename
+        self.cls = test_class
+        self.name = test_class.__name__
+        self.tests: List[_Test] = []
+
+
+def filepath_tests(filename) -> List[_TestCls]:
     test_loader = unittest.TestLoader()
-    output = dict()
+    output: List[_TestCls] = []
     loader = importlib.machinery.SourceFileLoader("non_important", filename)
     module = importlib.util.module_from_spec(
         importlib.util.spec_from_loader(loader.name, loader)
@@ -32,15 +54,12 @@ def filepath_tests(filename):
     loader.exec_module(module)
     for test_suite in test_loader.loadTestsFromModule(module):
         for test in test_suite:
-            cls_name = test.__class__.__name__
-            test_method_name = test._testMethodName
-            test_method = getattr(test.__class__, test._testMethodName)
-            if cls_name not in output:
-                output[cls_name] = {"class": test.__class__, "tests": {}}
-            output[cls_name]["tests"][test_method_name] = {
-                "unittest": test,
-                "method": test_method,
-            }
+            cls = _TestCls(test.__class__, filename)
+            if cls.name in [x for x in output if x.name == cls.name]:
+                cls = [x for x in output if x.name == cls.name][0]
+            else:
+                output.append(cls)
+            cls.tests.append(_Test(test))
     return output
 
 
@@ -226,7 +245,7 @@ class FMF(metaclass=__FMFMeta):
     def link(cls, *args, post_mark=""):
         """
         generic url links (default is verify) but could contain more see TMT doc
-        https://tmt.readthedocs.io/en/latest/spec/tests.html#link
+        https://tmt.readthedocs.io/en/latest/spec/core.html#link
         """
         return cls._set_fn("link", base_type=FMF_ATTRIBUTES["link"])(
             *args, post_mark=post_mark
@@ -239,7 +258,7 @@ class FMF(metaclass=__FMFMeta):
         It can be link to issue tracker or bugzilla
         https://tmt.readthedocs.io/en/latest/spec/tests.html#link
         """
-        return cls.link(*[{"verify": arg} for arg in args], post_mark=post_mark)
+        return cls.link(*[{"verifies": arg} for arg in args], post_mark=post_mark)
 
 
 def identifier(text):
@@ -294,8 +313,10 @@ def yaml_fmf_output(path=None, testfile_globs=None, fmf_file=None, config=None):
     fmf_file = fmf_file or config.get(CONFIG_FMF_FILE, MAIN_FMF)
     testfile_globs = testfile_globs or config.get(CONFIG_TESTGLOBS, TESTFILE_GLOBS)
     path = os.path.realpath(path or config.get(CONFIG_TEST_PATH, TEST_PATH))
-    print(config)
-    print(fmf_file, testfile_globs, path)
+    debug_print("Use config:", config)
+    debug_print("Input FMF file:", fmf_file)
+    debug_print("Tests path:", path)
+    debug_print("Test globs:", testfile_globs)
     fmf_dict = dict()
     if fmf_file and os.path.exists(fmf_file):
         with open(fmf_file) as fd:
@@ -304,58 +325,56 @@ def yaml_fmf_output(path=None, testfile_globs=None, fmf_file=None, config=None):
         filename_dict = default_key(
             fmf_dict, identifier(os.path.basename(filename)), {}
         )
-        for class_name, items in filepath_tests(filename).items():
-            class_dict = default_key(filename_dict, identifier(class_name), {})
-            for test_name, items2 in items["tests"].items():
-                test_dict = default_key(class_dict, identifier(test_name), {})
-                doc_str = (items2["method"].__doc__ or "").strip("\n")
+        for cls in filepath_tests(filename):
+            class_dict = default_key(filename_dict, identifier(cls.name), {})
+            for test in cls.tests:
+                test_dict = default_key(class_dict, identifier(test.name), {})
+                doc_str = (test.method.__doc__ or "").strip("\n")
                 # set summary attribute if not given by decorator
-                current_name = __get_fmf_attr_name(items2["method"], SUMMARY_KEY)
-                if not hasattr(items2["method"], current_name):
+                current_name = __get_fmf_attr_name(test.method, SUMMARY_KEY)
+                if not hasattr(test.method, current_name):
                     # try to use first line of docstring if given
                     if doc_str:
                         summary = doc_str.split("\n")[0].strip()
                     else:
                         summary = "{} {} {}".format(
-                            os.path.basename(filename), class_name, test_name
+                            os.path.basename(filename), cls.name, test.name
                         )
-                    setattr(items2["method"], current_name, summary)
+                    setattr(test.method, current_name, summary)
 
                 # set description attribute by docstring if not given by decorator
-                current_name = __get_fmf_attr_name(items2["method"], DESCRIPTION_KEY)
-                if not hasattr(items2["method"], current_name):
+                current_name = __get_fmf_attr_name(test.method, DESCRIPTION_KEY)
+                if not hasattr(test.method, current_name):
                     # try to use first line of docstring if given
                     if doc_str:
                         description = doc_str
-                        setattr(items2["method"], current_name, description)
+                        setattr(test.method, current_name, description)
                 # generic FMF attributes set by decorators
                 for key in FMF_ATTRIBUTES:
                     __update_dict_key(
-                        items2["method"], fmf_prefixed_name(key), key, test_dict
+                        test.method, fmf_prefixed_name(key), key, test_dict
                     )
                 # special config items
                 if CONFIG_ADDITIONAL_KEY in config:
                     for key, fmf_key in config[CONFIG_ADDITIONAL_KEY].items():
-                        __update_dict_key(items2["method"], key, fmf_key, test_dict)
+                        __update_dict_key(test.method, key, fmf_key, test_dict)
                 if CONFIG_POSTPROCESSING_TEST in config:
-                    print("postprocessing")
+                    debug_print(
+                        "Doing posprocessing: ", config[CONFIG_POSTPROCESSING_TEST]
+                    )
                     __post_processing(
-                        test_dict,
-                        config[CONFIG_POSTPROCESSING_TEST],
-                        filename,
-                        class_name,
-                        test_name,
+                        test_dict, config[CONFIG_POSTPROCESSING_TEST], cls, test
                     )
     return fmf_dict
 
 
-def __post_processing(input_dict, config_dict, filename, class_name, test_name):
+def __post_processing(input_dict, config_dict, cls, test):
     if isinstance(config_dict, dict):
         for k, v in config_dict.items():
             if isinstance(v, dict):
                 if k not in input_dict:
                     input_dict[k] = dict()
-                __post_processing(input_dict[k], v, filename, class_name, test_name)
+                __post_processing(input_dict[k], v, cls, test)
             else:
                 input_dict[k] = eval(v)
 
@@ -363,15 +382,15 @@ def __post_processing(input_dict, config_dict, filename, class_name, test_name):
 def show(path, testfile_globs, indent="  "):
     for filename in get_test_files(path, testfile_globs):
         print(os.path.basename(filename))
-        for class_name, items in filepath_tests(filename).items():
-            print(indent, class_name)
-            for test_name, items2 in items["tests"].items():
-                print(indent * 2, test_name)
+        for cls in filepath_tests(filename):
+            print(indent, cls.name)
+            for test in cls.tests:
+                print(indent * 2, test.name)
 
 
 def read_config(config_file):
     if not os.path.exists(config_file):
         raise FMFError(f"configuration files does not exists {config_file}")
-    print(f"using config: {config_file}")
+    debug_print(f"Read config file: {config_file}")
     with open(config_file) as fd:
         return yaml.safe_load(fd)
