@@ -260,6 +260,41 @@ class FMF(metaclass=__FMFMeta):
         """
         return cls.link(*[{"verifies": arg} for arg in args], post_mark=post_mark)
 
+    @classmethod
+    def adjust(
+        cls, when, because=None, continue_execution=True, post_mark="", **kwargs
+    ):
+        """
+        adjust testcase execution, see TMT specification
+        https://tmt.readthedocs.io/en/latest/spec/core.html#adjust
+
+        if key value arguments are passed they are applied as update of the dictionary items
+        else disable test execution as default option
+
+        e.g.
+
+        @adjust("distro ~< centos-6", "The test is not intended for less than centos-6")
+        @adjust("component == bash", "modify component", component="shell")
+
+        tricky example with passing merging variables as kwargs to code
+        because python does not allow to do parameter as X+="something"
+        use **dict syntax for parameter(s)
+
+        @adjust("component == bash", "append env variable", **{"environment+": {"BASH":true}})
+        """
+        adjust_item = dict(when=when)
+        if because is not None:
+            adjust_item["because"] = because
+        if kwargs:
+            adjust_item.update(kwargs)
+        else:
+            adjust_item["enabled"] = False
+        if continue_execution is False:
+            adjust_item["continue"] = False
+        return cls._set_fn("adjust", base_type=FMF_ATTRIBUTES["adjust"])(
+            adjust_item, post_mark=post_mark
+        )
+
 
 def identifier(text):
     return "/" + text

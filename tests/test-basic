@@ -5,7 +5,7 @@ from fmf_metadata import FMF
 from fmf_metadata.base import generic_metadata_setter, FMF_ATTR_PREFIX
 
 @FMF.tag("example", post_mark="+")
-@FMF.adjust({"when": "distro > Fedora-33", "enabled": True})
+@FMF.adjust("distro > Fedora-33")
 class Test1(unittest.TestCase):
 
 
@@ -18,7 +18,8 @@ class Test1(unittest.TestCase):
     def testSummaryTag(self):
         pass
 
-    @FMF.adjust({"when": "distro ~< centos-6", "enabled": False})
+    @FMF.adjust("distro ~< centos-6")
+    @FMF.adjust("component == cockpit", environment={"shell": True})
     def testAdjust(self):
         pass
 

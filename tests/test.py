@@ -11,8 +11,9 @@ class TestFMF(unittest.TestCase):
         self.assertEqual(
             out["/test-basic"]["/Test1"]["/testAdjust"]["adjust"],
             [
+                {"when": "component == cockpit", "environment": {"shell": True}},
                 {"when": "distro ~< centos-6", "enabled": False},
-                {"when": "distro > Fedora-33", "enabled": True},
+                {"when": "distro > Fedora-33", "enabled": False},
             ],
         )
         self.assertEqual(
