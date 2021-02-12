@@ -30,6 +30,7 @@ FMF_ATTRIBUTES = {
     "require": (
         list,
         str,
+        dict,
     ),
     "test": (str,),
     "framework": (str,),
