@@ -57,7 +57,7 @@ def run():
         config = dict()
         if opts.config:
             config = read_config(opts.config)
-        fmf_file = config.get(CONFIG_FMF_FILE, MAIN_FMF)
+        fmf_file = opts.fmf_file or config.get(CONFIG_FMF_FILE, MAIN_FMF)
         data = yaml_fmf_output(
             fmf_file=opts.fmf_file,
             path=opts.fmf_path,
