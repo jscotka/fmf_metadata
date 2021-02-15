@@ -21,6 +21,8 @@ from fmf_metadata.constants import (
     SUMMARY_KEY,
     TEST_PATH,
     TESTFILE_GLOBS,
+    CONFIG_MERGE_PLUS,
+    CONFIG_MERGE_MINUS,
 )
 
 
@@ -342,16 +344,26 @@ def __find_fmf_root(path):
         root = os.path.dirname(root)
 
 
-def yaml_fmf_output(path=None, testfile_globs=None, fmf_file=None, config=None):
+def yaml_fmf_output(
+    path=None,
+    testfile_globs=None,
+    fmf_file=None,
+    config=None,
+    merge_plus_list=None,
+    merge_minus_list=None,
+):
     config = config or dict()
     # set values in priority 1. input param, 2. from config file, 3. default value
     fmf_file = fmf_file or config.get(CONFIG_FMF_FILE, MAIN_FMF)
     testfile_globs = testfile_globs or config.get(CONFIG_TESTGLOBS, TESTFILE_GLOBS)
     path = os.path.realpath(path or config.get(CONFIG_TEST_PATH, TEST_PATH))
+    merge_plus_list = merge_plus_list or config.get(CONFIG_MERGE_PLUS, [])
+    merge_minus_list = merge_minus_list or config.get(CONFIG_MERGE_MINUS, [])
     debug_print("Use config:", config)
     debug_print("Input FMF file:", fmf_file)
     debug_print("Tests path:", path)
     debug_print("Test globs:", testfile_globs)
+
     fmf_dict = dict()
     if fmf_file and os.path.exists(fmf_file):
         with open(fmf_file) as fd:
@@ -386,17 +398,23 @@ def yaml_fmf_output(path=None, testfile_globs=None, fmf_file=None, config=None):
                         setattr(test.method, current_name, description)
                 # generic FMF attributes set by decorators
                 for key in FMF_ATTRIBUTES:
+                    clean_key = key.rstrip("".join(FMF_POSTFIX))
+                    # Allow to override key storing with merging postfixes
+                    if clean_key in merge_plus_list:
+                        target_key = clean_key + "+"
+                    elif clean_key in merge_minus_list:
+                        target_key = clean_key + "-"
+                    else:
+                        target_key = key
                     __update_dict_key(
-                        test.method, fmf_prefixed_name(key), key, test_dict
+                        test.method, fmf_prefixed_name(key), target_key, test_dict
                     )
                 # special config items
                 if CONFIG_ADDITIONAL_KEY in config:
                     for key, fmf_key in config[CONFIG_ADDITIONAL_KEY].items():
                         __update_dict_key(test.method, key, fmf_key, test_dict)
                 if CONFIG_POSTPROCESSING_TEST in config:
-                    debug_print(
-                        "Doing posprocessing: ", config[CONFIG_POSTPROCESSING_TEST]
-                    )
+                    # debug_print("Doing posprocessing: ", config[CONFIG_POSTPROCESSING_TEST])
                     __post_processing(
                         test_dict, config[CONFIG_POSTPROCESSING_TEST], cls, test
                     )

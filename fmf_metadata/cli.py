@@ -45,6 +45,18 @@ def arg_parser():
         action="store",
         help="Config file for fmf formatter",
     )
+    parser.add_argument(
+        "--merge-plus",
+        dest="merge_plus",
+        action="append",
+        help="override post_mark for mentioned elementns, will change everytime to + merging",
+    )
+    parser.add_argument(
+        "--merge-minus",
+        dest="merge_minus",
+        action="append",
+        help="override post_mark for mentioned elementns, will change everytime to - merging",
+    )
     parser.add_argument("tests", nargs="*")
     return parser
 
