@@ -100,3 +100,7 @@ class TestConfig(unittest.TestCase):
             set(out["/check-example.py"]["/Test1"]["/testGeneric"]["generic_B"]),
             set(["b", "bb"]),
         )
+        # test merge override
+        self.assertEqual(
+            out["/check-example.py"]["/Test1"]["/testMerge"]["tag+"], ["t2", "t1"]
+        )

@@ -49,13 +49,13 @@ def arg_parser():
         "--merge-plus",
         dest="merge_plus",
         action="append",
-        help="override post_mark for mentioned elementns, will change everytime to + merging",
+        help="override post_mark for item elements (change to +)",
     )
     parser.add_argument(
         "--merge-minus",
         dest="merge_minus",
         action="append",
-        help="override post_mark for mentioned elementns, will change everytime to - merging",
+        help="override post_mark for item elements (change to -)",
     )
     parser.add_argument("tests", nargs="*")
     return parser
@@ -75,6 +75,8 @@ def run():
             path=opts.fmf_path,
             testfile_globs=opts.tests,
             config=config,
+            merge_minus_list=opts.merge_minus,
+            merge_plus_list=opts.merge_plus,
         )
         if opts.fmf_update:
             debug_print(f"Update FMF file: {fmf_file}")

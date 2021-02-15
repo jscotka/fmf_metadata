@@ -16,3 +16,5 @@ test_postprocessing:
 test_glob: ["check-ex*"]
 test_path: "tests/"
 fmf_file: "/tmp/out.fmf"
+
+merge_plus: ["tag"]
