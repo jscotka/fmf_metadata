@@ -284,7 +284,8 @@ class FMF(metaclass=__FMFMeta):
 
         @adjust("component == bash", "append env variable", **{"environment+": {"BASH":true}})
         """
-        adjust_item = dict(when=when)
+        adjust_item = dict()
+        adjust_item["when"] = when
         if because is not None:
             adjust_item["because"] = because
         if kwargs:
