@@ -1,11 +1,11 @@
 import argparse
 import yaml
-import sys
 from fmf_metadata.base import (
     show,
     yaml_fmf_output,
     read_config,
     debug_print,
+    dict_to_yaml,
 )
 from fmf_metadata.constants import MAIN_FMF, CONFIG_FMF_FILE
 
@@ -81,9 +81,9 @@ def run():
         if opts.fmf_update:
             debug_print(f"Update FMF file: {fmf_file}")
             with open(fmf_file, "w") as fd:
-                yaml.safe_dump(data, fd)
+                fd.write(dict_to_yaml(data))
         else:
-            yaml.safe_dump(data, sys.stdout)
+            print(dict_to_yaml(data))
 
 
 if __name__ == "__main__":

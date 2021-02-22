@@ -1,4 +1,5 @@
 from typing import List
+import io
 import inspect
 import unittest
 import yaml
@@ -24,6 +25,22 @@ from fmf_metadata.constants import (
     CONFIG_MERGE_PLUS,
     CONFIG_MERGE_MINUS,
 )
+
+# Handle both older and newer yaml loader
+# https://msg.pyyaml.org/load
+try:
+    from yaml import FullLoader as YamlLoader
+except ImportError:  # pragma: no cover
+    from yaml import SafeLoader as YamlLoader
+
+
+# Load all strings from YAML files as unicode
+# https://stackoverflow.com/questions/2890146/
+def construct_yaml_str(self, node):
+    return self.construct_scalar(node)
+
+
+YamlLoader.add_constructor("tag:yaml.org,2002:str", construct_yaml_str)
 
 
 def debug_print(*args, **kwargs):
@@ -368,7 +385,7 @@ def yaml_fmf_output(
     fmf_dict = dict()
     if fmf_file and os.path.exists(fmf_file):
         with open(fmf_file) as fd:
-            fmf_dict = yaml.safe_load(fd)
+            fmf_dict = yaml.load(fd, Loader=YamlLoader)
     for filename in get_test_files(path, testfile_globs):
         filename_dict = default_key(
             fmf_dict, identifier(os.path.basename(filename)), {}
@@ -448,3 +465,37 @@ def read_config(config_file):
     debug_print(f"Read config file: {config_file}")
     with open(config_file) as fd:
         return yaml.safe_load(fd)
+
+
+def dict_to_yaml(data, width=None, sort=False):
+    """ Convert dictionary into yaml """
+    output = io.StringIO()
+    try:
+        yaml.safe_dump(
+            data,
+            output,
+            sort_keys=sort,
+            encoding="utf-8",
+            allow_unicode=True,
+            width=width,
+            indent=4,
+            default_flow_style=False,
+        )
+    except TypeError:
+        # FIXME: Temporary workaround for rhel-8 to disable key sorting
+        # https://stackoverflow.com/questions/31605131/
+        # https://github.com/psss/tmt/issues/207
+        def representer(self, data):
+            self.represent_mapping("tag:yaml.org,2002:map", data.items())
+
+        yaml.add_representer(dict, representer, Dumper=yaml.SafeDumper)
+        yaml.safe_dump(
+            data,
+            output,
+            encoding="utf-8",
+            allow_unicode=True,
+            width=width,
+            indent=4,
+            default_flow_style=False,
+        )
+    return output.getvalue()
