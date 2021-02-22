@@ -450,15 +450,6 @@ def __post_processing(input_dict, config_dict, cls, test):
                 input_dict[k] = eval(v)
 
 
-def show(path, testfile_globs, indent="  "):
-    for filename in get_test_files(path, testfile_globs):
-        print(os.path.basename(filename))
-        for cls in filepath_tests(filename):
-            print(indent, cls.name)
-            for test in cls.tests:
-                print(indent * 2, test.name)
-
-
 def read_config(config_file):
     if not os.path.exists(config_file):
         raise FMFError(f"configuration files does not exists {config_file}")

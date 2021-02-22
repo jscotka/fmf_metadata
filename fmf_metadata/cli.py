@@ -1,7 +1,6 @@
 import argparse
 import yaml
 from fmf_metadata.base import (
-    show,
     yaml_fmf_output,
     read_config,
     debug_print,
@@ -18,20 +17,17 @@ def arg_parser():
         description="FMF formatter and wrapper for running tests under pytest"
     )
     parser.add_argument(
-        "-f", "--fmf", dest="fmf", action="store_true", help="Output to fmf format"
-    )
-    parser.add_argument(
         "--file",
         dest="fmf_file",
         action="store",
-        help="Output to fmf format",
+        help="Use this FMF file (input and output when option --update)",
     )
     parser.add_argument(
         "-u",
         "--update",
         dest="fmf_update",
         action="store_true",
-        help="Output to fmf format",
+        help="Update the selected FMF file",
     )
     parser.add_argument(
         "--path",
@@ -63,27 +59,24 @@ def arg_parser():
 
 def run():
     opts = arg_parser().parse_args()
-    if not opts.fmf:
-        show(path=opts.fmf_path, testfile_globs=opts.tests)
+    config = dict()
+    if opts.config:
+        config = read_config(opts.config)
+    fmf_file = opts.fmf_file or config.get(CONFIG_FMF_FILE, MAIN_FMF)
+    data = yaml_fmf_output(
+        fmf_file=opts.fmf_file,
+        path=opts.fmf_path,
+        testfile_globs=opts.tests,
+        config=config,
+        merge_minus_list=opts.merge_minus,
+        merge_plus_list=opts.merge_plus,
+    )
+    if opts.fmf_update:
+        debug_print(f"Update FMF file: {fmf_file}")
+        with open(fmf_file, "w") as fd:
+            fd.write(dict_to_yaml(data))
     else:
-        config = dict()
-        if opts.config:
-            config = read_config(opts.config)
-        fmf_file = opts.fmf_file or config.get(CONFIG_FMF_FILE, MAIN_FMF)
-        data = yaml_fmf_output(
-            fmf_file=opts.fmf_file,
-            path=opts.fmf_path,
-            testfile_globs=opts.tests,
-            config=config,
-            merge_minus_list=opts.merge_minus,
-            merge_plus_list=opts.merge_plus,
-        )
-        if opts.fmf_update:
-            debug_print(f"Update FMF file: {fmf_file}")
-            with open(fmf_file, "w") as fd:
-                fd.write(dict_to_yaml(data))
-        else:
-            print(dict_to_yaml(data))
+        print(dict_to_yaml(data))
 
 
 if __name__ == "__main__":
