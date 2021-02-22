@@ -381,11 +381,10 @@ def yaml_fmf_output(
     debug_print("Input FMF file:", fmf_file)
     debug_print("Tests path:", path)
     debug_print("Test globs:", testfile_globs)
-
     fmf_dict = dict()
     if fmf_file and os.path.exists(fmf_file):
         with open(fmf_file) as fd:
-            fmf_dict = yaml.load(fd, Loader=YamlLoader)
+            fmf_dict = yaml.load(fd, Loader=YamlLoader) or fmf_dict
     for filename in get_test_files(path, testfile_globs):
         filename_dict = default_key(
             fmf_dict, identifier(os.path.basename(filename)), {}
