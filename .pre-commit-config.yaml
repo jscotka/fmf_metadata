@@ -29,9 +29,3 @@ repos:
         exclude: examples
         args:
           - --max-line-length=100
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.790
-    hooks:
-      - id: mypy
-        exclude: examples
-        args: [--no-strict-optional, --ignore-missing-imports]
