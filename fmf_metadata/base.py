@@ -328,18 +328,30 @@ def default_key(parent_dict, key, empty_obj):
     return parent_dict[key]
 
 
-def __update_dict_key(method, key, fmf_key, dictionary):
+def __update_dict_key(method, key, fmf_key, dictionary, override_postfix=""):
     """
     This function have to ensure that there is righ one of attribute type extension
     and removes all others
     """
-    for postfix in FMF_POSTFIX:
-        curr_fmf_key = fmf_key + postfix
-        value = getattr(method, key + postfix, None)
-        if curr_fmf_key in dictionary:
-            dictionary.pop(curr_fmf_key)
-        if value is not None:
-            dictionary[curr_fmf_key] = value
+    value = None
+    current_postfix = ""
+    # find if item is defined inside method
+    for attribute in dir(method):
+        stripped = attribute.rstrip("".join(FMF_POSTFIX))
+        if key == stripped:
+            value = getattr(method, attribute)
+            strip_len = len(stripped)
+            current_postfix = attribute[strip_len:]
+    # delete all keys in dictionary started with fmf_key
+    for item in dictionary.copy():
+        stripped = item.rstrip("".join(FMF_POSTFIX))
+        if stripped == fmf_key:
+            dictionary.pop(item)
+    out_key = (
+        fmf_key + override_postfix if override_postfix else fmf_key + current_postfix
+    )
+    if value:
+        dictionary[out_key] = value
 
 
 def __get_fmf_attr_name(method, attribute):
@@ -415,16 +427,18 @@ def yaml_fmf_output(
                         setattr(test.method, current_name, description)
                 # generic FMF attributes set by decorators
                 for key in FMF_ATTRIBUTES:
-                    clean_key = key.rstrip("".join(FMF_POSTFIX))
                     # Allow to override key storing with merging postfixes
-                    if clean_key in merge_plus_list:
-                        target_key = clean_key + "+"
-                    elif clean_key in merge_minus_list:
-                        target_key = clean_key + "-"
-                    else:
-                        target_key = key
+                    override_postfix = ""
+                    if key in merge_plus_list:
+                        override_postfix = "+"
+                    elif key in merge_minus_list:
+                        override_postfix = "-"
                     __update_dict_key(
-                        test.method, fmf_prefixed_name(key), target_key, test_dict
+                        test.method,
+                        fmf_prefixed_name(key),
+                        key,
+                        test_dict,
+                        override_postfix,
                     )
                 # special config items
                 if CONFIG_ADDITIONAL_KEY in config:
