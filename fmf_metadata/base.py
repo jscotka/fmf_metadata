@@ -24,6 +24,7 @@ from fmf_metadata.constants import (
     TESTFILE_GLOBS,
     CONFIG_MERGE_PLUS,
     CONFIG_MERGE_MINUS,
+    ENVIRONMENT_KEY,
 )
 
 # Handle both older and newer yaml loader
@@ -313,6 +314,20 @@ class FMF(metaclass=__FMFMeta):
             adjust_item["continue"] = False
         return cls._set_fn("adjust", base_type=FMF_ATTRIBUTES["adjust"])(
             adjust_item, post_mark=post_mark
+        )
+
+    @classmethod
+    def environment(cls, post_mark="", **kwargs):
+        """
+        environment testcase execution, see TMT specification
+        https://tmt.readthedocs.io/en/latest/spec/test.html#environment
+
+        add environment keys
+        example:
+        @environment(PYTHONPATH=".", DATA_DIR="test_data")
+        """
+        return cls._set_fn(ENVIRONMENT_KEY, base_type=FMF_ATTRIBUTES[ENVIRONMENT_KEY])(
+            kwargs, post_mark=post_mark
         )
 
 
