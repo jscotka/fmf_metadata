@@ -7,6 +7,7 @@ import importlib
 import os
 import glob
 import sys
+import fmf
 from fmf_metadata.constants import (
     FMF_POSTFIX,
     FMF_ATTRIBUTES,
@@ -52,15 +53,19 @@ def debug_print(*args, **kwargs):
 class _Test:
     def __init__(self, test):
         self.test = test
-        self.name = test._testMethodName
-        self.method = getattr(test.__class__, test._testMethodName)
+        if hasattr(test, "_testMethodName"):
+            self.name = test._testMethodName
+            self.method = getattr(test.__class__, test._testMethodName)
+        else:
+            self.name = test.function.__name__
+            self.method = test.function
 
 
 class _TestCls:
     def __init__(self, test_class, filename):
         self.file = filename
         self.cls = test_class
-        self.name = test_class.__name__
+        self.name = test_class.__name__ if test_class is not None else None
         self.tests: List[_Test] = []
 
 
@@ -389,6 +394,60 @@ def __find_fmf_root(path):
         root = os.path.dirname(root)
 
 
+def test_data_dict(
+    test_dict, config, filename, cls, test, merge_plus_list=None, merge_minus_list=None
+):
+    merge_plus_list = merge_plus_list or config.get(CONFIG_MERGE_PLUS, [])
+    merge_minus_list = merge_minus_list or config.get(CONFIG_MERGE_MINUS, [])
+    doc_str = (test.method.__doc__ or "").strip("\n")
+    # set summary attribute if not given by decorator
+    current_name = __get_fmf_attr_name(test.method, SUMMARY_KEY)
+    if not hasattr(test.method, current_name):
+        # try to use first line of docstring if given
+        if doc_str:
+            summary = doc_str.split("\n")[0].strip()
+        else:
+            summary = (
+                (f"{os.path.basename(filename)} " if filename else "")
+                + (f"{cls.name} " if cls.name else "")
+                + test.name
+            )
+        setattr(test.method, current_name, summary)
+
+    # set description attribute by docstring if not given by decorator
+    current_name = __get_fmf_attr_name(test.method, DESCRIPTION_KEY)
+    if not hasattr(test.method, current_name):
+        # try to use first line of docstring if given
+        if doc_str:
+            description = doc_str
+            setattr(test.method, current_name, description)
+    # generic FMF attributes set by decorators
+    for key in FMF_ATTRIBUTES:
+        # Allow to override key storing with merging postfixes
+        override_postfix = ""
+        if key in merge_plus_list:
+            override_postfix = "+"
+        elif key in merge_minus_list:
+            override_postfix = "-"
+        __update_dict_key(
+            test.method,
+            fmf_prefixed_name(key),
+            key,
+            test_dict,
+            override_postfix,
+        )
+    # special config items
+    if CONFIG_ADDITIONAL_KEY in config:
+        for key, fmf_key in config[CONFIG_ADDITIONAL_KEY].items():
+            __update_dict_key(test.method, key, fmf_key, test_dict)
+    if CONFIG_POSTPROCESSING_TEST in config:
+        # debug_print("Doing posprocessing: ", config[CONFIG_POSTPROCESSING_TEST])
+        __post_processing(
+            test_dict, config[CONFIG_POSTPROCESSING_TEST], cls, test, filename
+        )
+    return test_dict
+
+
 def yaml_fmf_output(
     path=None,
     testfile_globs=None,
@@ -402,8 +461,7 @@ def yaml_fmf_output(
     fmf_file = fmf_file or config.get(CONFIG_FMF_FILE, MAIN_FMF)
     testfile_globs = testfile_globs or config.get(CONFIG_TESTGLOBS, TESTFILE_GLOBS)
     path = os.path.realpath(path or config.get(CONFIG_TEST_PATH, TEST_PATH))
-    merge_plus_list = merge_plus_list or config.get(CONFIG_MERGE_PLUS, [])
-    merge_minus_list = merge_minus_list or config.get(CONFIG_MERGE_MINUS, [])
+
     debug_print("Use config:", config)
     debug_print("Input FMF file:", fmf_file)
     debug_print("Tests path:", path)
@@ -420,60 +478,25 @@ def yaml_fmf_output(
             class_dict = default_key(filename_dict, identifier(cls.name), {})
             for test in cls.tests:
                 test_dict = default_key(class_dict, identifier(test.name), {})
-                doc_str = (test.method.__doc__ or "").strip("\n")
-                # set summary attribute if not given by decorator
-                current_name = __get_fmf_attr_name(test.method, SUMMARY_KEY)
-                if not hasattr(test.method, current_name):
-                    # try to use first line of docstring if given
-                    if doc_str:
-                        summary = doc_str.split("\n")[0].strip()
-                    else:
-                        summary = "{} {} {}".format(
-                            os.path.basename(filename), cls.name, test.name
-                        )
-                    setattr(test.method, current_name, summary)
-
-                # set description attribute by docstring if not given by decorator
-                current_name = __get_fmf_attr_name(test.method, DESCRIPTION_KEY)
-                if not hasattr(test.method, current_name):
-                    # try to use first line of docstring if given
-                    if doc_str:
-                        description = doc_str
-                        setattr(test.method, current_name, description)
-                # generic FMF attributes set by decorators
-                for key in FMF_ATTRIBUTES:
-                    # Allow to override key storing with merging postfixes
-                    override_postfix = ""
-                    if key in merge_plus_list:
-                        override_postfix = "+"
-                    elif key in merge_minus_list:
-                        override_postfix = "-"
-                    __update_dict_key(
-                        test.method,
-                        fmf_prefixed_name(key),
-                        key,
-                        test_dict,
-                        override_postfix,
-                    )
-                # special config items
-                if CONFIG_ADDITIONAL_KEY in config:
-                    for key, fmf_key in config[CONFIG_ADDITIONAL_KEY].items():
-                        __update_dict_key(test.method, key, fmf_key, test_dict)
-                if CONFIG_POSTPROCESSING_TEST in config:
-                    # debug_print("Doing posprocessing: ", config[CONFIG_POSTPROCESSING_TEST])
-                    __post_processing(
-                        test_dict, config[CONFIG_POSTPROCESSING_TEST], cls, test
-                    )
+                test_data_dict(
+                    test_dict=test_dict,
+                    config=config,
+                    filename=filename,
+                    cls=cls,
+                    test=test,
+                    merge_plus_list=merge_plus_list,
+                    merge_minus_list=merge_minus_list,
+                )
     return fmf_dict
 
 
-def __post_processing(input_dict, config_dict, cls, test):
+def __post_processing(input_dict, config_dict, cls, test, filename):
     if isinstance(config_dict, dict):
         for k, v in config_dict.items():
             if isinstance(v, dict):
                 if k not in input_dict:
                     input_dict[k] = dict()
-                __post_processing(input_dict[k], v, cls, test)
+                __post_processing(input_dict[k], v, cls, test, filename)
             else:
                 input_dict[k] = eval(v)
 
@@ -518,3 +541,77 @@ def dict_to_yaml(data, width=None, sort=False):
             default_flow_style=False,
         )
     return output.getvalue()
+
+
+def get_node(fmf_root, relative):
+    tree = fmf.Tree(fmf_root)
+    return tree.find(relative)
+
+
+def update_fmf_file(fmf_file_location, func, config=None):
+    keys = list()
+    file_loc = fmf_file_location
+    base_file_name = os.path.basename(fmf_file_location)
+    if os.path.exists(file_loc):
+        if not os.path.isdir(file_loc):
+            file_loc = os.path.dirname(file_loc)
+    tree = fmf.Tree(file_loc)
+    relative_path = file_loc.removeprefix(os.path.abspath(tree.root))
+
+    # get all keys what has to be in FMF metadata tree
+    keys += relative_path.strip("/").split("/")
+
+    if func.cls:
+        cls = _TestCls(func.cls, base_file_name)
+        keys.append(cls.name)
+    else:
+        cls = _TestCls(None, base_file_name)
+    # normalise test name to pytest identifier
+    func.function.__name__ = f"{os.path.basename(func.name)}"
+    test = _Test(func)
+    keys.append(test.name)
+
+    current = tree
+    split_num = len(keys)
+    for num, item in enumerate(keys):
+        try:
+            current = current[f"/{item}"]
+        except KeyError:
+            split_num = num
+            break
+    undefined_keys = keys[split_num:]
+
+    identifier = "/" + "/".join(keys[:split_num])
+    for item in undefined_keys:
+        parent = get_node(tree.root, identifier)
+        item_id = f"/{item}"
+        if identifier == "/":
+            identifier = item_id
+        else:
+            identifier += item_id
+        with parent as data:
+            data[item_id] = dict(__generated=True)
+
+    current = get_node(tree.root, identifier)
+
+    relative_test_path = os.path.join(
+        file_loc.removeprefix(os.path.realpath(os.path.dirname(current.sources[-1]))),
+        os.path.basename(fmf_file_location),
+    )
+
+    cfg_file = os.getenv("CONFIG")
+    if cfg_file:
+        config = read_config(cfg_file)
+    elif config and not isinstance(config, dict):
+        config = read_config(config)
+    else:
+        config = config or {}
+    print(config)
+    with current as data:
+        test_data_dict(
+            test_dict=data,
+            config=config,
+            filename=relative_test_path,
+            cls=cls,
+            test=test,
+        )

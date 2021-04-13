@@ -1,4 +1,4 @@
-TESTS_TARGET := ./tests/test.py
+TESTS_TARGET := ./tests
 TESTS_CONTAINER_RUN=podman run --rm -ti -v $(CURDIR):/src --security-opt label=disable $(TESTS_IMAGE)
 TESTS_IMAGE=requre_tests
 
@@ -19,4 +19,4 @@ clean:
 	find . -name \*.pyc -exec rm {} \;
 
 check:
-	PYTHONPATH=$(CURDIR) PYTHONDONTWRITEBYTECODE=1 python3 -m pytest --verbose --showlocals $(TESTS_TARGET)
+	PYTHONPATH=$(CURDIR) PYTHONDONTWRITEBYTECODE=1 python3 -m pytest --verbose --showlocals --ignore=$(TESTS_TARGET)/pytest $(TESTS_TARGET)
