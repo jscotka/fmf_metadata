@@ -4,8 +4,8 @@ from fmf_metadata import constants
 
 CONF = {
     constants.CONFIG_POSTPROCESSING_TEST: {
-        "test": """f'python3 -m pytest -v {filename}{("::"
-         + str(cls.name)) if cls.name else ""}::{test.name}'"""
+        "test": "f'python3 -m pytest -v {filename}"
+        + """{("::" + str(cls.name)) if cls.name else ""}::{test.name}'"""
     }
 }
 

@@ -560,7 +560,7 @@ def update_fmf_file(fmf_file_location, func, config=None):
 
     # get all keys what has to be in FMF metadata tree
     keys += relative_path.strip("/").split("/")
-
+    keys.append(os.path.basename(fmf_file_location))
     if func.cls:
         cls = _TestCls(func.cls, base_file_name)
         keys.append(cls.name)

@@ -32,9 +32,12 @@ class PytestFMF(unittest.TestCase):
             out = yaml.load(fd)
             self.assertEqual(out["base"], "a")
             self.assertGreater(len(out), 1)
-            self.assertIn("/test_pass", out)
-            self.assertIn("/test", out["/A"])
-            self.assertEqual(out["/test_param[a]"]["__generated"], True)
+            self.assertIn("/test_pass", out["/test_pytest.py"])
+            self.assertIn("/test", out["/test_pytest.py"]["/A"])
             self.assertEqual(
-                out["/test_param[a]"]["summary"], "test_pytest.py test_param[a]"
+                out["/test_pytest.py"]["/test_param[a]"]["__generated"], True
+            )
+            self.assertEqual(
+                out["/test_pytest.py"]["/test_param[a]"]["summary"],
+                "test_pytest.py test_param[a]",
             )
