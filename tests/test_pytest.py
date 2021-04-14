@@ -24,7 +24,7 @@ class PytestFMF(unittest.TestCase):
             self.assertEqual(out["base"], "a")
             self.assertEqual(len(out), 1)
         out = subprocess.check_output(
-            f"pytest-3 -v  {self.tempdir} 2>&1 || true", shell=True
+            f"REGENERATE_FMF=yes pytest-3 -v {self.tempdir} 2>&1 || true", shell=True
         )
         for line in out.splitlines():
             print(line)
