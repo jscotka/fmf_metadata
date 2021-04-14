@@ -441,7 +441,6 @@ def test_data_dict(
         for key, fmf_key in config[CONFIG_ADDITIONAL_KEY].items():
             __update_dict_key(test.method, key, fmf_key, test_dict)
     if CONFIG_POSTPROCESSING_TEST in config:
-        # debug_print("Doing posprocessing: ", config[CONFIG_POSTPROCESSING_TEST])
         __post_processing(
             test_dict, config[CONFIG_POSTPROCESSING_TEST], cls, test, filename
         )
@@ -548,7 +547,17 @@ def get_node(fmf_root, relative):
     return tree.find(relative)
 
 
-def update_fmf_file(fmf_file_location, func, config=None):
+def update_fmf_file(func, config=None):
+    if hasattr(func, "items"):
+        for item in func.items:
+            _update_fmf_file(item, config=config)
+    else:
+        _update_fmf_file(func, config=config)
+    debug_print("\nFMF files updated\n")
+
+
+def _update_fmf_file(func, config=None):
+    fmf_file_location = func.fspath
     keys = list()
     file_loc = fmf_file_location
     base_file_name = os.path.basename(fmf_file_location)
@@ -591,6 +600,8 @@ def update_fmf_file(fmf_file_location, func, config=None):
             identifier += item_id
         with parent as data:
             data[item_id] = dict(__generated=True)
+    if undefined_keys:
+        debug_print(f"ADD new node: {undefined_keys}")
 
     current = get_node(tree.root, identifier)
 
@@ -606,7 +617,6 @@ def update_fmf_file(fmf_file_location, func, config=None):
         config = read_config(config)
     else:
         config = config or {}
-    print(config)
     with current as data:
         test_data_dict(
             test_dict=data,

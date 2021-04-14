@@ -10,7 +10,6 @@ CONF = {
 }
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def store_fmf_metadata(request):
-    update_fmf_file(request.node.fspath, request.node.listchain()[-1], config=CONF)
-    yield
+    update_fmf_file(request.node, config=CONF)
