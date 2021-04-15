@@ -6,7 +6,7 @@ from fmf_metadata import constants
 
 CONF = {
     constants.CONFIG_POSTPROCESSING_TEST: {
-        "test": """import shlex
+        "test": """
 cls_str = ("::" + str(cls.name)) if cls.name else ""
 escaped = shlex.quote(f"{filename}{cls_str}::{test.name}")
 f"python3 -m pytest -v {escaped}" """

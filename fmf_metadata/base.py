@@ -9,6 +9,7 @@ import glob
 import sys
 import ast
 import fmf
+import shlex
 from fmf_metadata.constants import (
     FMF_POSTFIX,
     FMF_ATTRIBUTES,
@@ -29,6 +30,7 @@ from fmf_metadata.constants import (
     ENVIRONMENT_KEY,
 )
 
+_ = shlex
 # Handle both older and newer yaml loader
 # https://msg.pyyaml.org/load
 try:
@@ -568,6 +570,10 @@ def update_fmf_file(func, config=None):
     debug_print("\nFMF files updated\n")
 
 
+def str_normalise(text):
+    return "".join(x if (x.isalnum() or x in ["_", "."]) else "_" for x in text)
+
+
 def _update_fmf_file(func, config=None):
     fmf_file_location = func.fspath
     keys = list()
@@ -590,7 +596,7 @@ def _update_fmf_file(func, config=None):
     # normalise test name to pytest identifier
     func.function.__name__ = f"{os.path.basename(func.name)}"
     test = _Test(func)
-    keys.append(test.name)
+    keys.append(str_normalise(test.name))
 
     current = tree
     split_num = len(keys)
