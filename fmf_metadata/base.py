@@ -7,6 +7,7 @@ import importlib
 import os
 import glob
 import sys
+import ast
 import fmf
 from fmf_metadata.constants import (
     FMF_POSTFIX,
@@ -489,6 +490,17 @@ def yaml_fmf_output(
     return fmf_dict
 
 
+def multiline_eval(expr, context, type_ignores=None):
+    """Evaluate several lines of input, returning the result of the last line
+    https://stackoverflow.com/questions/12698028/why-is-pythons-eval-rejecting-this-multiline-string-and-how-can-i-fix-it
+    """
+    tree = ast.parse(expr)
+    eval_expr = ast.Expression(tree.body[-1].value)
+    exec_expr = ast.Module(tree.body[:-1], type_ignores=type_ignores or [])
+    exec(compile(exec_expr, "file", "exec"), context)
+    return eval(compile(eval_expr, "file", "eval"), context)
+
+
 def __post_processing(input_dict, config_dict, cls, test, filename):
     if isinstance(config_dict, dict):
         for k, v in config_dict.items():
@@ -497,7 +509,7 @@ def __post_processing(input_dict, config_dict, cls, test, filename):
                     input_dict[k] = dict()
                 __post_processing(input_dict[k], v, cls, test, filename)
             else:
-                input_dict[k] = eval(v)
+                input_dict[k] = multiline_eval(v, dict(locals(), **globals()))
 
 
 def read_config(config_file):

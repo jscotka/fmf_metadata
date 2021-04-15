@@ -6,8 +6,9 @@ from fmf_metadata import constants
 
 CONF = {
     constants.CONFIG_POSTPROCESSING_TEST: {
-        "test": "f'python3 -m pytest -v {filename}'"
-        + """f'{("::" + str(cls.name)) if cls.name else ""}::{test.name}'"""
+        "test": """
+cls_str=("::" + str(cls.name)) if cls.name else ""
+f"python3 -m pytest -v '{filename}{cls_str}::{test.name}'" """
     }
 }
 

@@ -35,6 +35,10 @@ class PytestFMF(unittest.TestCase):
             self.assertIn("/test_pass", out["/test_pytest.py"])
             self.assertIn("/test", out["/test_pytest.py"]["/A"])
             self.assertEqual(
+                out["/test_pytest.py"]["/A"]["/test"]["test"],
+                "python3 -m pytest -v 'test_pytest.py::A::test'",
+            )
+            self.assertEqual(
                 out["/test_pytest.py"]["/test_param[a]"]["__generated"], True
             )
             self.assertEqual(
