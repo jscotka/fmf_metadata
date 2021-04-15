@@ -45,9 +45,9 @@ def construct_yaml_str(self, node):
 YamlLoader.add_constructor("tag:yaml.org,2002:str", construct_yaml_str)
 
 
-def debug_print(*args, **kwargs):
-    kwargs["file"] = sys.stderr
-    print(*args, **kwargs)
+def debug_print(*args):
+    for arg in args:
+        sys.__stderr__.write(str(arg) + "\n")
 
 
 class _Test:
@@ -557,6 +557,13 @@ def update_fmf_file(func, config=None):
 
 
 def _update_fmf_file(func, config=None):
+    cfg_file = os.getenv("CONFIG")
+    if cfg_file:
+        config = read_config(cfg_file)
+    elif config and not isinstance(config, dict):
+        config = read_config(config)
+    else:
+        config = config or {}
     fmf_file_location = func.fspath
     keys = list()
     file_loc = fmf_file_location
@@ -591,35 +598,29 @@ def _update_fmf_file(func, config=None):
     undefined_keys = keys[split_num:]
 
     identifier = "/" + "/".join(keys[:split_num])
+    base_identifier = identifier
+    output_dict = dict()
+    tmp = output_dict
+    leaf = None
     for item in undefined_keys:
-        parent = get_node(tree.root, identifier)
         item_id = f"/{item}"
         if identifier == "/":
             identifier = item_id
         else:
             identifier += item_id
-        with parent as data:
-            data[item_id] = dict(__generated=True)
-    if undefined_keys:
-        debug_print(f"ADD new node: {undefined_keys}")
-
-    current = get_node(tree.root, identifier)
-
+        tmp[item_id] = dict()
+        leaf = tmp[item_id]
+    parent = get_node(tree.root, base_identifier)
     relative_test_path = os.path.join(
-        file_loc.removeprefix(os.path.realpath(os.path.dirname(current.sources[-1]))),
+        file_loc.removeprefix(os.path.realpath(os.path.dirname(parent.sources[-1]))),
         os.path.basename(fmf_file_location),
     )
-
-    cfg_file = os.getenv("CONFIG")
-    if cfg_file:
-        config = read_config(cfg_file)
-    elif config and not isinstance(config, dict):
-        config = read_config(config)
-    else:
-        config = config or {}
-    with current as data:
+    if undefined_keys:
+        debug_print(f"ADD new node: {undefined_keys}")
+    with parent as data:
+        data[base_identifier] = output_dict
         test_data_dict(
-            test_dict=data,
+            test_dict=leaf or data,
             config=config,
             filename=relative_test_path,
             cls=cls,
