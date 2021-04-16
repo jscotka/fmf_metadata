@@ -623,9 +623,7 @@ def _update_fmf_file(func, config=None):
             data[item_id] = dict(__generated=True)
     current = get_node(tree.root, identifier)
     if undefined_keys:
-        debug_print(
-            f"ADD new node: {undefined_keys} to {current.sources[-1]} ({current.name})"
-        )
+        debug_print(f"ADD node: {current.name} (file: {current.sources[-1]})")
 
     relative_test_path = os.path.join(
         file_loc.removeprefix(os.path.realpath(os.path.dirname(current.sources[-1]))),
