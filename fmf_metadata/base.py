@@ -10,6 +10,7 @@ import sys
 import ast
 import fmf
 import shlex
+import re
 from fmf_metadata.constants import (
     FMF_POSTFIX,
     FMF_ATTRIBUTES,
@@ -593,9 +594,11 @@ def _update_fmf_file(func, config=None):
         keys.append(cls.name)
     else:
         cls = _TestCls(None, base_file_name)
-    # normalise test name to pytest identifier
-    func.function.__name__ = f"{os.path.basename(func.name)}"
     test = _Test(func)
+    # normalise test name to pytest identifier
+    test.name = re.search(
+        f".*({os.path.basename(func.function.__name__)}.*)", func.name
+    ).group(1)
     keys.append(str_normalise(test.name))
 
     current = tree
