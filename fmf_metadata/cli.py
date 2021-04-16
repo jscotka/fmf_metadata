@@ -92,9 +92,12 @@ def run():
         pytest_params = list()
         for item in get_test_files(opts.fmf_path or ".", opts.tests):
             pytest_params.append(item)
-            debug_print(item)
+
         for item in collect(pytest_params):
-            update_fmf_file(item, config=config or PYTEST_DEFAULT_CONF)
+            if opts.fmf_update:
+                update_fmf_file(item, config=config or PYTEST_DEFAULT_CONF)
+            else:
+                print(item)
 
 
 if __name__ == "__main__":
