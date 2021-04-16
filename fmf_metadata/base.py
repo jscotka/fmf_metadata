@@ -31,6 +31,7 @@ from fmf_metadata.constants import (
     ENVIRONMENT_KEY,
 )
 
+
 _ = shlex
 # Handle both older and newer yaml loader
 # https://msg.pyyaml.org/load
@@ -568,7 +569,6 @@ def update_fmf_file(func, config=None):
             _update_fmf_file(item, config=config)
     else:
         _update_fmf_file(func, config=config)
-    debug_print("\nFMF files updated\n")
 
 
 def str_normalise(text):
@@ -621,10 +621,11 @@ def _update_fmf_file(func, config=None):
             identifier += item_id
         with parent as data:
             data[item_id] = dict(__generated=True)
-    if undefined_keys:
-        debug_print(f"ADD new node: {undefined_keys}")
-
     current = get_node(tree.root, identifier)
+    if undefined_keys:
+        debug_print(
+            f"ADD new node: {undefined_keys} to {current.sources[-1]} ({current.name})"
+        )
 
     relative_test_path = os.path.join(
         file_loc.removeprefix(os.path.realpath(os.path.dirname(current.sources[-1]))),
