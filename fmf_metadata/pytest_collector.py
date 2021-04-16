@@ -1,15 +1,14 @@
-from _pytest import config
-from _pytest.main import Session
+import pytest
+
+# current solution based on https://github.com/pytest-dev/pytest/discussions/8554
+
+
+class ItemsCollector:
+    def pytest_collection_modifyitems(self, items):
+        self.items = items[:]
 
 
 def collect(opts):
-    conf = config.get_config(opts, plugins=[])
-    conf.parse(opts)
-    conf._do_configure()
-    sess = Session.from_config(config=conf)
-
-    conf.hook.pytest_sessionstart(session=sess)
-    conf.hook.pytest_collection(session=sess)
-    conf.hook.pytest_collection_finish(session=sess)
-
-    return sess.items
+    plugin_col = ItemsCollector()
+    pytest.main(["--collect-only"] + opts, plugins=[plugin_col])
+    return plugin_col.items
