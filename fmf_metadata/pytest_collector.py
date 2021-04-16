@@ -10,5 +10,5 @@ class ItemsCollector:
 
 def collect(opts):
     plugin_col = ItemsCollector()
-    pytest.main(["--collect-only"] + opts, plugins=[plugin_col])
+    pytest.main(["--collect-only", "-m", "''"] + opts, plugins=[plugin_col])
     return plugin_col.items
