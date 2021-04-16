@@ -39,6 +39,7 @@ FMF_ATTRIBUTES = {
         str,
     ),
     "path": (str,),
+    "enabled": (bool,),
 }
 FMF_ATTR_PREFIX = "_fmf__"
 FMF_POSTFIX = ("+", "-", "")

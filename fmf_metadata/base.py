@@ -375,7 +375,7 @@ def __update_dict_key(method, key, fmf_key, dictionary, override_postfix=""):
     out_key = (
         fmf_key + override_postfix if override_postfix else fmf_key + current_postfix
     )
-    if value:
+    if value is not None:
         dictionary[out_key] = value
 
 
@@ -441,6 +441,7 @@ def test_data_dict(
             test_dict,
             override_postfix,
         )
+
     # special config items
     if CONFIG_ADDITIONAL_KEY in config:
         for key, fmf_key in config[CONFIG_ADDITIONAL_KEY].items():

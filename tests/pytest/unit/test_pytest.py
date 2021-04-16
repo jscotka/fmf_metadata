@@ -22,3 +22,18 @@ class A(unittest.TestCase):
 @pytest.mark.parametrize("test_input", ["a", "b", "c"])
 def test_param(test_input):
     print(test_input)
+
+
+@pytest.mark.slow
+def test_slow():
+    assert True
+
+
+@pytest.mark.skipif(True, reason="skipping")
+def test_skipif():
+    assert False
+
+
+@pytest.mark.skip(reason="Unconditional skipping")
+def test_skip():
+    assert False
