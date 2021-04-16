@@ -57,6 +57,6 @@ PYTEST_DEFAULT_CONF = {
         "test": """
 cls_str = ("::" + str(cls.name)) if cls.name else ""
 escaped = shlex.quote(f"{filename}{cls_str}::{test.name}")
-f"python3 -m pytest -v {escaped}" """
+f"python3 -m pytest -m '' -v {escaped}" """
     }
 }
