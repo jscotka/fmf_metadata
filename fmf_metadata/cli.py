@@ -7,6 +7,8 @@ from fmf_metadata.base import (
     dict_to_yaml,
     get_test_files,
     update_fmf_file,
+    StoreUpdater,
+    store_to_fmf_files,
 )
 from fmf_metadata.constants import MAIN_FMF, CONFIG_FMF_FILE, PYTEST_DEFAULT_CONF
 from fmf_metadata.pytest_collector import collect
@@ -89,15 +91,16 @@ def run():
         else:
             print(dict_to_yaml(data))
     else:
+        debug_print("Using PYTEST collector")
         pytest_params = list()
         for item in get_test_files(opts.fmf_path or ".", opts.tests):
             pytest_params.append(item)
-
+        out = StoreUpdater()
         for item in collect(pytest_params):
-            if opts.fmf_update:
-                update_fmf_file(item, config=config or PYTEST_DEFAULT_CONF)
-            else:
-                print(item)
+            update_fmf_file(item, config=config or PYTEST_DEFAULT_CONF, write_dict=out)
+            debug_print(f"Processing Item: {item}")
+
+        store_to_fmf_files(out, opts.fmf_update)
 
 
 if __name__ == "__main__":

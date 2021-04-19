@@ -564,19 +564,105 @@ def get_node(fmf_root, relative):
     return tree.find(relative)
 
 
-def update_fmf_file(func, config=None):
-    if hasattr(func, "items"):
-        for item in func.items:
-            _update_fmf_file(item, config=config)
-    else:
-        _update_fmf_file(func, config=config)
+class StoreUpdater:
+    def __init__(self):
+        self._internal_dict = dict()
+
+    def __getitem__(self, node):
+        return self._internal_dict[node.name]
+
+    def __setitem__(self, node, value):
+        self._internal_dict[node.name] = [node, value]
+
+    def has_key(self, node):
+        return node.name in self._internal_dict
+
+    def __repr__(self):
+        return repr(self._internal_dict)
+
+    def __len__(self):
+        return len(self._internal_dict)
+
+    def __delitem__(self, node):
+        del self._internal_dict[node.name]
+
+    def clear(self):
+        return self._internal_dict.clear()
+
+    def copy(self):
+        return self._internal_dict.copy()
+
+    def keys(self):
+        return self._internal_dict.keys()
+
+    def values(self):
+        return self._internal_dict.values()
+
+    def items(self):
+        return self._internal_dict.items()
+
+    def __cmp__(self, dict_):
+        return self._internal_dict.__cmp__(self._internal_dict, dict_)
+
+    def __contains__(self, node):
+        return node.name in self._internal_dict
+
+    def __iter__(self):
+        return iter(self._internal_dict)
+
+    def merge(self, node, input_dict):
+        merge_dict(input_dict, self[node][1])
+
+
+def merge_dict(source, destination):
+    """https://stackoverflow.com/questions/20656135/python-deep-merge-dictionary-data"""
+    for key, value in source.items():
+        if isinstance(value, dict):
+            # get node or create one
+            node = destination.setdefault(key, {})
+            merge_dict(value, node)
+        else:
+            destination[key] = value
+
+    return destination
+
+
+def update_fmf_file(func, config, write_dict):
+    for item in func.items if hasattr(func, "items") else [func]:
+        node, out_dict = _update_fmf_file(item, config=config)
+        if node in write_dict:
+            write_dict.merge(node, out_dict)
+        else:
+            write_dict[node] = out_dict
+    return write_dict
 
 
 def str_normalise(text):
     return "".join(x if (x.isalnum() or x in ["_", "."]) else "_" for x in text)
 
 
+def define_undefined(input_dict, keys, config, relative_test_path, cls, test):
+    for item in keys:
+        item_id = f"/{item}"
+        default_key(input_dict, item_id, empty_obj={})
+        input_dict = input_dict[item_id]
+    test_data_dict(
+        test_dict=input_dict,
+        config=config,
+        filename=relative_test_path,
+        cls=cls,
+        test=test,
+    )
+
+
 def _update_fmf_file(func, config=None):
+    cfg_file = os.getenv("CONFIG")
+    if cfg_file:
+        config = read_config(cfg_file)
+    elif config and not isinstance(config, dict):
+        config = read_config(config)
+    else:
+        config = config or {}
     fmf_file_location = func.fspath
     keys = list()
     file_loc = fmf_file_location
@@ -610,39 +696,31 @@ def _update_fmf_file(func, config=None):
         except KeyError:
             split_num = num
             break
-    undefined_keys = keys[split_num:]
-
-    identifier = "/" + "/".join(keys[:split_num])
-    for item in undefined_keys:
-        parent = get_node(tree.root, identifier)
-        item_id = f"/{item}"
-        if identifier == "/":
-            identifier = item_id
-        else:
-            identifier += item_id
-        with parent as data:
-            data[item_id] = dict(__generated=True)
-    current = get_node(tree.root, identifier)
-    if undefined_keys:
-        debug_print(f"ADD node: {current.name} (file: {current.sources[-1]})")
-
     relative_test_path = os.path.join(
         file_loc.removeprefix(os.path.realpath(os.path.dirname(current.sources[-1]))),
         os.path.basename(fmf_file_location),
     )
+    undefined_keys = keys[split_num:]
+    store_dict = {}
+    define_undefined(store_dict, undefined_keys, config, relative_test_path, cls, test)
+    return current, store_dict
 
-    cfg_file = os.getenv("CONFIG")
-    if cfg_file:
-        config = read_config(cfg_file)
-    elif config and not isinstance(config, dict):
-        config = read_config(config)
-    else:
-        config = config or {}
-    with current as data:
-        test_data_dict(
-            test_dict=data,
-            config=config,
-            filename=relative_test_path,
-            cls=cls,
-            test=test,
-        )
+
+def store_to_fmf_files(stored_items, update=False):
+    for node_name, value in stored_items.items():
+        if update:
+            changed = False
+            for k, v in value[1].items():
+                if k not in value[0].data or value[0].data[k] != v:
+                    changed = True
+                    break
+            if changed:
+                with value[0] as data:
+                    data.update(value[1])
+                debug_print(f"Updating node: {node_name} ({value[0].sources[-1]})")
+            else:
+                debug_print(f"Node not changed: {node_name} ({value[0].sources[-1]})")
+        else:
+            debug_print(f"Node: {node_name}")
+            for line in dict_to_yaml(value[1]).splitlines():
+                debug_print(f"\t{line}")
