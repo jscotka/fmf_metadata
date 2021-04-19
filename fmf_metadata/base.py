@@ -11,6 +11,8 @@ import ast
 import fmf
 import shlex
 import re
+from functools import lru_cache
+
 from fmf_metadata.constants import (
     FMF_POSTFIX,
     FMF_ATTRIBUTES,
@@ -655,6 +657,11 @@ def define_undefined(input_dict, keys, config, relative_test_path, cls, test):
     )
 
 
+@lru_cache(maxsize=10)
+def get_cached_tree(path_loc):
+    return fmf.Tree(path_loc)
+
+
 def _update_fmf_file(func, config=None):
     cfg_file = os.getenv("CONFIG")
     if cfg_file:
@@ -670,7 +677,7 @@ def _update_fmf_file(func, config=None):
     if os.path.exists(file_loc):
         if not os.path.isdir(file_loc):
             file_loc = os.path.dirname(file_loc)
-    tree = fmf.Tree(file_loc)
+    tree = get_cached_tree(file_loc)
     relative_path = file_loc.removeprefix(os.path.abspath(tree.root))
 
     # get all keys what has to be in FMF metadata tree
