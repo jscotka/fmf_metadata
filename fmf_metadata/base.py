@@ -693,8 +693,8 @@ def _update_fmf_file(func, config=None):
     test.name = re.search(
         f".*({os.path.basename(func.function.__name__)}.*)", func.name
     ).group(1)
-    keys.append(str_normalise(test.name))
-
+    # TODO: removed str_normalise(...) will see what happen
+    keys.append(test.name)
     current = tree
     split_num = len(keys)
     for num, item in enumerate(keys):
