@@ -657,7 +657,7 @@ def define_undefined(input_dict, keys, config, relative_test_path, cls, test):
     )
 
 
-@lru_cache(maxsize=10)
+@lru_cache(maxsize=None)
 def get_cached_tree(path_loc):
     return fmf.Tree(path_loc)
 

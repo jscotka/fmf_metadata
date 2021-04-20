@@ -11,7 +11,9 @@ class ItemsCollector:
 
 def collect(opts):
     plugin_col = ItemsCollector()
-    pytest.main(["--collect-only", "-m", ""] + opts, plugins=[plugin_col])
+    pytest.main(
+        ["--collect-only", "-pno:terminal", "-m", ""] + opts, plugins=[plugin_col]
+    )
     for item in plugin_col.items:
         func = item.function
         for marker in item.iter_markers():
