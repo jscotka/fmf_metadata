@@ -27,11 +27,9 @@ def collect(opts):
                 # add skipif as tag as well (possible to use adjust, but conditions are python code)
                 arg_string = "SKIP "
                 if args:
-                    arg_string += str(args)
-                if args and kwargs:
-                    arg_string += " "
-                if kwargs:
-                    arg_string += str(kwargs)
+                    arg_string += " ".join(map(str, args))
+                if "reason" in kwargs:
+                    arg_string += " " + kwargs["reason"]
                 FMF.tag(arg_string)(func)
             elif key == "parametrize":
                 # do nothing, parameters are already part of test name
