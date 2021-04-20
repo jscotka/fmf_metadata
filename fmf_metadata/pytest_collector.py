@@ -24,7 +24,15 @@ def collect(opts):
             if key == "skip":
                 FMF.enabled(False)(func)
             elif key == "skipif":
-                FMF.description(f"skipif: (cond: {args}) -> {kwargs}")(func)
+                # add skipif as tag as well (possible to use adjust, but conditions are python code)
+                arg_string = "SKIP "
+                if args:
+                    arg_string += str(args)
+                if args and kwargs:
+                    arg_string += " "
+                if kwargs:
+                    arg_string += str(kwargs)
+                FMF.tag(arg_string)(func)
             elif key == "parametrize":
                 # do nothing, parameters are already part of test name
                 pass
